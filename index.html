@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a1712">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Poker Chip Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{--bg:#0e1f19;--felt:#13392b;--card:#183f31;--line:#2a5a47;--text:#eef5f1;--muted:#9fbcae;--gold:#f2c14e;--red:#e5534b;--green:#3fb950;--blue:#4c9aff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;touch-action:manipulation;-webkit-tap-highlight-color:transparent;padding-bottom:40px}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);box-shadow:0 4px 12px rgba(0,0,0,.35)}
+header{display:flex;align-items:center;gap:6px;padding:8px 12px;background:#0a1712}
+header h1{font-size:16px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .meta{font-size:12px;color:var(--muted);font-weight:400}
+header button{padding:7px 10px;font-size:13px}
+.players{padding:8px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;border-bottom:1px solid var(--line);max-height:42vh;overflow:auto}
+.pc{background:var(--card);border:2px solid transparent;border-radius:10px;padding:5px 8px;cursor:pointer;min-width:0;position:relative}
+.pc.act{border-color:var(--gold);box-shadow:0 0 0 3px rgba(242,193,78,.25)}
+.pc.fold{opacity:.45}
+.pc.out{opacity:.5;border:2px dashed var(--line)}
+.pc .nm{font-weight:600;font-size:13px;display:flex;align-items:center;gap:3px;min-width:0}
+.pc .nm span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.pc .st{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.pc .sub{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pc .stat{font-size:11px;font-weight:700;color:var(--gold);min-height:15px}
+.pos{color:var(--green)!important}.neg{color:var(--red)!important}
+.badge{font-size:10px;font-weight:800;padding:0 5px;border-radius:8px;background:#fff;color:#000;flex:none}
+.badge.sb{background:var(--blue);color:#fff}.badge.bb{background:var(--gold);color:#1a1300}
+main{padding:12px;max-width:760px;margin:0 auto}
+.card{background:var(--felt);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 8px;font-size:17px}
+.card h3{margin:12px 0 6px;font-size:14px;color:var(--muted);font-weight:600}
+button{font:inherit;border:0;border-radius:10px;padding:12px 14px;background:#2b5545;color:var(--text);font-weight:600;cursor:pointer}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.35;pointer-events:none}
+.red{background:var(--red)!important;color:#fff}.green{background:#238636!important;color:#fff}.gold{background:var(--gold)!important;color:#1a1300}.blue{background:#2f6fd0!important;color:#fff}
+.big{width:100%;padding:16px;font-size:17px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>*{flex:1}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+input{font:inherit;background:#0b1d16;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;width:100%;min-width:0}
+input:focus{outline:2px solid var(--gold);border-color:transparent}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.chip{padding:8px 12px;font-size:13px;background:#1f4a3a;border-radius:20px;flex:none}
+.chip.sel{background:var(--gold);color:#1a1300}
+.muted{color:var(--muted);font-size:13px}
+.hint{font-size:12px;color:var(--muted);margin-top:4px;min-height:16px}
+.potline{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.potline .pot{font-size:22px;font-weight:800;color:var(--gold)}
+.street{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.who{font-size:16px;margin:4px 0 12px}
+.who b{color:var(--gold)}
+.log{font-size:13px;color:var(--muted);max-height:240px;overflow:auto;margin:0;padding-left:18px}
+.log li.st{list-style:none;margin-left:-18px;color:var(--text);font-weight:700;margin-top:4px}
+.prow{display:grid;grid-template-columns:1fr 110px 34px;gap:6px;margin-bottom:6px}
+.prow button{padding:0;background:#3a2422}
+.potbox{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}
+.potbox .t{display:flex;justify-content:space-between;font-weight:700;margin-bottom:6px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+th,td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600;font-size:12px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:20}
+#modal.on{display:flex}
+#modal .sheet{background:var(--felt);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:16px;width:100%;max-width:560px;max-height:88vh;overflow:auto}
+@media(min-width:600px){#modal{align-items:center}#modal .sheet{border-radius:16px}}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"><div class="sheet" id="sheet"></div></div>
+<div id="toast"></div>
+<script>
+'use strict';
+const KEY = 'pokerTracker.v1';
+const STREETS = ['Pre-flop', 'Flop', 'Turn', 'River'];
+let S = load();
+let undoStack = [];
+let setup = { start: 1000, sb: 5, bb: 10, rows: [{ name: 'Player 1', amt: 1000 }, { name: 'Player 2', amt: 1000 }, { name: 'Player 3', amt: 1000 }, { name: 'Player 4', amt: 1000 }] };
+let confirmKey = null;
+
+/* ---------- utils ---------- */
+function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+function pushUndo() { undoStack.push(JSON.stringify(S)); if (undoStack.length > 200) undoStack.shift(); }
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => '₹' + Number(n).toLocaleString('en-IN');
+const P = id => S.players.find(p => p.id === id);
+const nm = id => esc(P(id).name);
+const num = v => { const n = Math.floor(Number(v)); return isFinite(n) && n > 0 ? n : 0; };
+const sum = a => a.reduce((x, y) => x + y, 0);
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
+function netOf(p) { return p.stack + (p.pending || 0) - p.buyin; }
+function sgn(n) { return (n > 0 ? '+' : n < 0 ? '−' : '') + fmt(Math.abs(n)); }
+
+/* ---------- table order helpers ---------- */
+function nextFrom(id, pool) {
+  const order = S.players.map(p => p.id);
+  const i = order.indexOf(id);
+  if (i < 0) return pool[0];
+  for (let k = 1; k <= order.length; k++) { const c = order[(i + k) % order.length]; if (pool.includes(c)) return c; }
+  return pool[0];
+}
+function readySeats() { return S.players.filter(p => !p.out && !p.removed && p.stack + (p.pending || 0) > 0).map(p => p.id); }
+
+/* ---------- hand engine ---------- */
+function H() { return S.hand; }
+function log(s) { H().log.push(s); }
+function put(id, amt) {
+  const h = H(), p = P(id);
+  const a = Math.max(0, Math.min(amt, p.stack));
+  p.stack -= a; h.bets[id] += a; h.contrib[id] += a;
+  if (p.stack === 0) h.allin[id] = true;
+  return a;
+}
+const live = () => H().seats.filter(id => !H().folded[id]);
+const actionable = () => live().filter(id => !H().allin[id]);
+function needs(id) { const h = H(); return !h.folded[id] && !h.allin[id] && (!h.acted[id] || h.bets[id] < h.cur); }
+
+function startHand() {
+  pushUndo();
+  S.players.forEach(p => { if (p.pending) { p.stack += p.pending; p.pending = 0; } });
+  const seats = S.players.filter(p => !p.out && !p.removed && p.stack > 0).map(p => p.id);
+  if (seats.length < 2) { undoStack.pop(); return toast('Need at least 2 seated players with chips'); }
+  const d = seats.includes(S.dealer) ? S.dealer : nextFrom(S.dealer, seats);
+  const n = seats.length, di = seats.indexOf(d);
+  let sbId, bbId, first;
+  if (n === 2) { sbId = d; bbId = seats[(di + 1) % 2]; first = sbId; }
+  else { sbId = seats[(di + 1) % n]; bbId = seats[(di + 2) % n]; first = seats[(di + 3) % n]; }
+  const h = { seats, dealer: d, sbId, bbId, street: 0, bets: {}, contrib: {}, folded: {}, allin: {}, acted: {}, cur: 0, lastRaise: S.bb || 1, toAct: null, log: [], start: {}, phase: 'bet', num: S.handNo + 1 };
+  seats.forEach(id => { h.bets[id] = 0; h.contrib[id] = 0; h.start[id] = P(id).stack; });
+  S.hand = h;
+  log('— Pre-flop —');
+  if (S.sb > 0) { const a = put(sbId, S.sb); log(`${nm(sbId)} posts small blind ${fmt(a)}${h.allin[sbId] ? ' (all-in)' : ''}`); }
+  if (S.bb > 0) { const a = put(bbId, S.bb); log(`${nm(bbId)} posts big blind ${fmt(a)}${h.allin[bbId] ? ' (all-in)' : ''}`); }
+  h.cur = Math.max(S.bb, ...Object.values(h.bets));
+  advance(first, true);
+}
+
+function advance(fromId, inclusive) {
+  const h = H();
+  const L = live();
+  if (L.length === 1) return winUncontested(L[0]);
+  const A = actionable();
+  let pending = A.filter(needs);
+  // only one player can still act and nobody left to bet against -> round over
+  if (A.length === 1 && h.bets[A[0]] >= h.cur) pending = [];
+  if (!pending.length) return nextStreet();
+  const s = h.seats, i = s.indexOf(fromId);
+  for (let k = inclusive ? 0 : 1; k <= s.length; k++) {
+    const id = s[(i + k) % s.length];
+    if (pending.includes(id)) { h.toAct = id; return; }
+  }
+}
+
+function nextStreet() {
+  const h = H();
+  h.seats.forEach(id => h.bets[id] = 0);
+  h.cur = 0; h.acted = {}; h.lastRaise = S.bb || 1;
+  h.street++;
+  if (h.street > 3) return toShowdown();
+  if (actionable().length < 2) {
+    if (!h.runout) { log('All-in — run out the board'); h.runout = true; }
+    return nextStreet();
+  }
+  log('— ' + STREETS[h.street] + ' —');
+  advance(h.dealer, false);
+}
+
+function computePots(h) {
+  const ids = h.seats;
+  const levels = [...new Set(ids.map(id => h.contrib[id]).filter(x => x > 0))].sort((a, b) => a - b);
+  const pots = []; let prev = 0;
+  const same = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+  for (const lv of levels) {
+    let amt = 0;
+    ids.forEach(id => { amt += Math.max(0, Math.min(h.contrib[id], lv) - prev); });
+    let elig = ids.filter(id => !h.folded[id] && h.contrib[id] >= lv);
+    if (amt > 0) {
+      if (!elig.length) { if (pots.length) pots[pots.length - 1].amt += amt; else pots.push({ amt, elig: ids.filter(id => !h.folded[id]) }); }
+      else if (pots.length && same(pots[pots.length - 1].elig, elig)) pots[pots.length - 1].amt += amt;
+      else pots.push({ amt, elig });
+    }
+    prev = lv;
+  }
+  return pots;
+}
+
+function toShowdown() {
+  const h = H();
+  h.phase = 'show';
+  h.seats.forEach(id => h.bets[id] = 0);
+  h.toAct = null;
+  h.pots = computePots(h);
+  h.winners = {};
+  h.pots.forEach((p, i) => { h.winners[i] = p.elig.length === 1 ? [p.elig[0]] : []; });
+  log('— Showdown —');
+}
+
+function seatOrderFromDealer(ids) {
+  const h = H(), s = h.seats, n = s.length, di = s.indexOf(h.dealer);
+  return [...ids].sort((a, b) => ((s.indexOf(a) - di - 1 + n) % n) - ((s.indexOf(b) - di - 1 + n) % n));
+}
+
+function awardPots() {
+  const h = H();
+  if (!h.pots.every((p, i) => h.winners[i].length)) return toast('Pick a winner for every pot');
+  pushUndo();
+  const res = {};
+  h.pots.forEach((pot, i) => {
+    const w = seatOrderFromDealer(h.winners[i]);
+    const share = Math.floor(pot.amt / w.length); let rem = pot.amt - share * w.length;
+    w.forEach(id => { const g = share + (rem > 0 ? 1 : 0); if (rem > 0) rem--; P(id).stack += g; res[id] = (res[id] || 0) + g; });
+    log(`${w.map(nm).join(' & ')} win${w.length > 1 ? ' (split)' : 's'} ${i === 0 ? 'main pot' : 'side pot ' + i} ${fmt(pot.amt)}`);
+  });
+  finishHand(res, false);
+}
+
+function winUncontested(id) {
+  const h = H();
+  const total = sum(h.seats.map(x => h.contrib[x]));
+  P(id).stack += total;
+  log(`${nm(id)} wins ${fmt(total)} (everyone else folded)`);
+  finishHand({ [id]: total }, true);
+}
+
+function finishHand(res, uncontested) {
+  const h = H();
+  const total = sum(h.seats.map(x => h.contrib[x]));
+  const entry = {
+    n: h.num, pot: total, uncontested,
+    winners: Object.keys(res).map(id => ({ name: P(+id).name, amt: res[id] })),
+    nets: h.seats.map(id => ({ name: P(id).name, net: P(id).stack - h.start[id] })),
+    log: h.log.slice()
+  };
+  S.history.unshift(entry);
+  if (S.history.length > 300) S.history.length = 300;
+  S.handNo++;
+  S.dealer = nextFrom(h.dealer, S.players.filter(p => !p.removed).map(p => p.id));
+  S.hand = null;
+  toast(entry.winners.map(w => `${w.name} wins ${fmt(w.amt)}`).join(' · '));
+}
+
+function act(type, amt) {
+  const h = H(), id = h.toAct, p = P(id);
+  if (h.phase !== 'bet' || id == null) return;
+  const toCall = h.cur - h.bets[id];
+  const name = nm(id);
+  if (type === 'raise' || type === 'allin') {
+    let to = type === 'allin' ? h.bets[id] + p.stack : amt;
+    if (type === 'raise' && !(to > h.cur)) return toast(`Must be more than ${fmt(h.cur)}`);
+    pushUndo();
+    to = Math.min(to, h.bets[id] + p.stack);
+    if (to <= h.cur) {
+      const a = put(id, to - h.bets[id]);
+      log(`${name} calls ${fmt(a)} (all-in)`);
+    } else {
+      const wasBet = h.cur === 0, inc = to - h.cur;
+      put(id, to - h.bets[id]);
+      if (inc >= h.lastRaise) h.lastRaise = inc;
+      h.cur = to; h.acted = {};
+      log(`${name} ${wasBet ? 'bets' : 'raises to'} ${fmt(to)}${h.allin[id] ? ' (all-in)' : ''}`);
+    }
+  } else {
+    pushUndo();
+    if (type === 'fold') { h.folded[id] = true; log(`${name} folds`); }
+    else if (type === 'check') { log(`${name} checks`); }
+    else if (type === 'call') { const a = put(id, toCall); log(`${name} calls ${fmt(a)}${h.allin[id] ? ' (all-in)' : ''}`); }
+  }
+  h.acted[id] = true;
+  advance(id, false);
+}
+
+function skipToShowdown() {
+  pushUndo();
+  log('(skipped to showdown)');
+  toShowdown();
+}
+
+/* ---------- rendering ---------- */
+function render() {
+  save();
+  if (!S) return renderSetup();
+  const h = S.hand;
+  let html = `<div class="top"><header><h1>♠ Poker <span class="meta">· ${h ? 'Hand #' + h.num : 'Hand #' + (S.handNo + 1) + ' next'} · Blinds ${fmt(S.sb)}/${fmt(S.bb)}</span></h1>
+    <button data-act="undo" ${undoStack.length ? '' : 'disabled'}>↶ Undo</button>
+    <button data-act="summary">Summary</button></header>
+    <div class="players">${S.players.filter(p => !p.removed).map(card).join('')}</div></div><main>`;
+  html += h ? (h.phase === 'bet' ? betPanel() : showPanel()) : idlePanel();
+  html += `<div class="foot">Saved on this device · works fully offline</div></main>`;
+  $('#app').innerHTML = html;
+  const ri = $('#raiseAmt'); if (ri) updateRaiseHint();
+  const a = document.querySelector('.pc.act'); if (a) a.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+function card(p) {
+  const h = S.hand, inHand = h && h.seats.includes(p.id);
+  let cls = 'pc', badges = '', stat = '';
+  if (h) {
+    if (inHand) {
+      if (h.dealer === p.id) badges += '<span class="badge">D</span>';
+      if (h.sbId === p.id) badges += '<span class="badge sb">SB</span>';
+      if (h.bbId === p.id) badges += '<span class="badge bb">BB</span>';
+      if (h.folded[p.id]) { cls += ' fold'; stat = 'Folded'; }
+      else if (h.allin[p.id]) stat = 'ALL-IN' + (h.bets[p.id] ? ' · ' + fmt(h.bets[p.id]) : '');
+      else if (h.bets[p.id]) stat = 'Bet ' + fmt(h.bets[p.id]);
+      if (h.toAct === p.id) { cls += ' act'; stat = stat ? stat + ' · to act' : 'To act'; }
+    } else { cls += ' out'; stat = p.out ? 'Sitting out' : 'Next hand'; }
+  } else {
+    if (S.dealer === p.id) badges += '<span class="badge">D</span>';
+    if (p.out) { cls += ' out'; stat = 'Sitting out'; }
+    else if (p.stack + (p.pending || 0) === 0) { cls += ' out'; stat = 'Busted · tap to buy in'; }
+  }
+  if (p.pending) stat += (stat ? ' · ' : '') + '+' + fmt(p.pending) + ' next';
+  const net = netOf(p);
+  return `<div class="${cls}" data-act="openP" data-p="${p.id}">
+    <div class="nm"><span class="n">${esc(p.name)}</span>${badges}</div>
+    <div class="st">${fmt(p.stack)}</div>
+    <div class="sub">In ${fmt(p.buyin)} · <span class="${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}">${sgn(net)}</span></div>
+    <div class="stat">${stat}</div></div>`;
+}
+
+function potTotal() { const h = H(); return sum(h.seats.map(id => h.contrib[id])); }
+function logHtml(lines) {
+  return `<ol class="log">${lines.slice().reverse().map(l => l.startsWith('—') ? `<li class="st">${l}</li>` : `<li>${l}</li>`).join('')}</ol>`;
+}
+
+function betPanel() {
+  const h = H(), id = h.toAct, p = P(id);
+  const toCall = h.cur - h.bets[id];
+  const maxTo = h.bets[id] + p.stack;
+  const canRaise = p.stack > toCall;
+  const minTo = Math.min(maxTo, h.cur === 0 ? Math.max(S.bb, 1) : h.cur + h.lastRaise);
+  const others = live().filter(x => x !== id && !h.allin[x]).length;
+  return `<div class="card">
+    <div class="potline"><span class="street">${STREETS[h.street]}</span><span class="pot">Pot ${fmt(potTotal())}</span></div>
+    <div class="who">Action on <b>${nm(id)}</b> · stack ${fmt(p.stack)}${toCall > 0 ? ` · to call <b>${fmt(Math.min(toCall, p.stack))}</b>` : ''}</div>
+    <div class="grid3">
+      <button class="red" data-act="fold">Fold</button>
+      ${toCall <= 0 ? `<button class="green" data-act="check">Check</button>` : `<button class="green" data-act="call">Call ${fmt(Math.min(toCall, p.stack))}${toCall >= p.stack ? ' (all-in)' : ''}</button>`}
+      <button class="gold" data-act="allin">All-in ${fmt(maxTo)}</button>
+    </div>
+    ${canRaise ? `<label>${h.cur === 0 ? 'Bet amount' : 'Raise to (total for this round)'}</label>
+    <div class="row"><input id="raiseAmt" type="number" inputmode="numeric" min="1" value="${minTo}" data-max="${maxTo}" data-bet="${h.bets[id]}">
+      <button class="blue" data-act="raise" style="flex:none">${h.cur === 0 ? 'Bet' : 'Raise'}</button></div>
+    <div class="chips">
+      <button class="chip" data-act="q" data-v="${minTo}">Min ${fmt(minTo)}</button>
+      ${quick('½ Pot', 0.5)}${quick('¾ Pot', 0.75)}${quick('Pot', 1)}
+      <button class="chip" data-act="q" data-v="${Math.min(maxTo, h.cur * 2 || S.bb * 2)}">2×</button>
+      <button class="chip" data-act="q" data-v="${Math.min(maxTo, h.cur * 3 || S.bb * 3)}">3×</button>
+    </div>
+    <div class="hint" id="raiseHint"></div>
+    ${others === 0 ? '<div class="muted">Everyone else is all-in — a raise can\'t be called; extra chips are returned.</div>' : ''}` : ''}
+  </div>
+  <div class="card"><div class="row" style="margin-bottom:10px">
+    <button data-act="skip">Skip to winner ⟶</button></div>
+    <div class="muted" style="margin-bottom:8px">Use “Skip to winner” if you don't want to enter every action — pick the winner from the chips already in.</div>
+    ${logHtml(h.log)}</div>`;
+}
+function quick(label, f) {
+  const h = H(), id = h.toAct, p = P(id);
+  const toCall = h.cur - h.bets[id];
+  const to = Math.min(h.bets[id] + p.stack, Math.round(h.cur + (potTotal() + toCall) * f));
+  return `<button class="chip" data-act="q" data-v="${to}">${label}</button>`;
+}
+function updateRaiseHint() {
+  const i = $('#raiseAmt'), hint = $('#raiseHint'); if (!i || !hint) return;
+  const v = num(i.value), max = +i.dataset.max, bet = +i.dataset.bet, cur = H().cur;
+  if (!v) hint.textContent = '';
+  else if (v <= cur) hint.innerHTML = `<span class="neg">Must be more than ${fmt(cur)}</span>`;
+  else if (v >= max) hint.textContent = `That's all-in (${fmt(max)})`;
+  else hint.textContent = `Puts ${fmt(v - bet)} more from stack · leaves ${fmt(max - v)}`;
+}
+
+function showPanel() {
+  const h = H();
+  const allPicked = h.pots.every((p, i) => h.winners[i].length);
+  return `<div class="card"><div class="potline"><span class="street">Showdown</span><span class="pot">Pot ${fmt(potTotal())}</span></div>
+    <div class="muted" style="margin-bottom:10px">Tap the winner of each pot. Tap more than one to split the pot.</div>
+    ${h.pots.map((pot, i) => `<div class="potbox"><div class="t"><span>${i === 0 ? 'Main pot' : 'Side pot ' + i}</span><span>${fmt(pot.amt)}</span></div>
+      ${pot.elig.length === 1 ? `<div class="muted">Returned / goes to ${nm(pot.elig[0])} (only player in it)</div>` :
+        `<div class="chips">${pot.elig.map(id => `<button class="chip ${h.winners[i].includes(id) ? 'sel' : ''}" data-act="win" data-pot="${i}" data-p="${id}">${nm(id)}</button>`).join('')}</div>`}
+    </div>`).join('')}
+    <button class="big green" data-act="award" ${allPicked ? '' : 'disabled'}>Award pot${h.pots.length > 1 ? 's' : ''}</button>
+  </div><div class="card">${logHtml(h.log)}</div>`;
+}
+
+function idlePanel() {
+  const ready = readySeats();
+  const last = S.history[0];
+  const d = S.players.find(p => p.id === S.dealer && !p.removed);
+  return `<div class="card">
+    <button class="big gold" data-act="deal" ${ready.length >= 2 ? '' : 'disabled'}>Deal hand #${S.handNo + 1}</button>
+    <div class="muted" style="margin-top:8px">${ready.length} players in · Dealer: ${d ? esc(d.name) : '—'} (tap a player to change dealer, buy in, sit out…)</div>
+    <label>Blinds (small / big)</label>
+    <div class="row"><input id="sbIn" type="number" inputmode="numeric" value="${S.sb}"><input id="bbIn" type="number" inputmode="numeric" value="${S.bb}"></div>
+    <div class="row" style="margin-top:10px"><button data-act="addPlayer">+ Add player</button></div>
+  </div>
+  ${last ? `<div class="card"><h2>Last hand (#${last.n}) · pot ${fmt(last.pot)}</h2>
+    <div>${last.winners.map(w => `<b>${esc(w.name)}</b> won ${fmt(w.amt)}`).join(' · ')}${last.uncontested ? ' <span class="muted">(others folded)</span>' : ''}</div>
+    <div class="muted" style="margin-top:6px">${last.nets.filter(x => x.net).map(x => `${esc(x.name)} <span class="${x.net > 0 ? 'pos' : 'neg'}">${sgn(x.net)}</span>`).join(' · ')}</div>
+    <h3>Actions</h3>${logHtml(last.log)}</div>` : ''}`;
+}
+
+function renderSetup() {
+  $('#app').innerHTML = `<div class="top"><header><h1>♠ Poker Chip Tracker</h1></header></div><main>
+  <div class="card"><h2>New game</h2>
+    <label>Starting amount (sets everyone — you can change each player below)</label>
+    <div class="chips">${[100, 500, 1000, 2000, 5000].map(v => `<button class="chip ${setup.start === v ? 'sel' : ''}" data-act="preset" data-v="${v}">${fmt(v)}</button>`).join('')}</div>
+    <div class="row"><input id="startAmt" type="number" inputmode="numeric" value="${setup.start}"><button data-act="applyStart" style="flex:none">Apply to all</button></div>
+    <label>Blinds (small / big)</label>
+    <div class="row"><input id="sSb" type="number" inputmode="numeric" value="${setup.sb}"><input id="sBb" type="number" inputmode="numeric" value="${setup.bb}"></div>
+    <label>Players (in seating order) — name / starting chips</label>
+    ${setup.rows.map((r, i) => `<div class="prow"><input class="rn" value="${esc(r.name)}" placeholder="Name"><input class="ra" type="number" inputmode="numeric" value="${r.amt}"><button data-act="delRow" data-i="${i}">✕</button></div>`).join('')}
+    <div class="row"><button data-act="addRow">+ Add player</button></div>
+    <div style="margin-top:14px"><button class="big gold" data-act="startGame">Start game</button></div>
+  </div><div class="foot">Works fully offline · data saved on this device</div></main>`;
+}
+function syncSetup() {
+  const names = [...document.querySelectorAll('.rn')], amts = [...document.querySelectorAll('.ra')];
+  setup.rows = names.map((n, i) => ({ name: n.value, amt: amts[i].value }));
+  setup.sb = $('#sSb') ? $('#sSb').value : setup.sb;
+  setup.bb = $('#sBb') ? $('#sBb').value : setup.bb;
+  const st = $('#startAmt'); if (st) setup.start = num(st.value) || setup.start;
+}
+
+/* ---------- modals ---------- */
+function modal(html) { $('#sheet').innerHTML = html; $('#modal').classList.add('on'); }
+function closeModal() { $('#modal').classList.remove('on'); confirmKey = null; }
+
+function playerModal(id) {
+  const p = P(id), h = S.hand, inHand = h && h.seats.includes(id);
+  const net = netOf(p);
+  modal(`<h2 style="margin:0 0 6px">${esc(p.name)}</h2>
+    <table><tr><th>Stack</th><th>Bought in</th><th>Net</th></tr>
+    <tr><td style="text-align:right">${fmt(p.stack)}</td><td>${fmt(p.buyin)}</td><td class="${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}">${sgn(net)}</td></tr></table>
+    ${p.pending ? `<div class="muted" style="margin-top:6px">${fmt(p.pending)} buy-in waiting — added when the next hand starts.</div>` : ''}
+    <label>Buy-in / re-buy ${inHand ? '(added after this hand — chips in play can\'t change mid-hand)' : ''}</label>
+    <div class="chips">${[100, 500, 1000, 2000].map(v => `<button class="chip" data-act="bq" data-v="${v}">${fmt(v)}</button>`).join('')}</div>
+    <div class="row"><input id="buyAmt" type="number" inputmode="numeric" placeholder="Amount"><button class="gold" data-act="buyin" data-p="${id}" style="flex:none">Add chips</button></div>
+    <label>Name</label>
+    <div class="row"><input id="renameIn" value="${esc(p.name)}"><button data-act="rename" data-p="${id}" style="flex:none">Save</button></div>
+    <div class="row" style="margin-top:14px">
+      ${!h ? `<button data-act="makeDealer" data-p="${id}">Make dealer</button>` : ''}
+      <button data-act="sit" data-p="${id}">${p.out ? 'Sit back in' : 'Sit out'}</button>
+    </div>
+    ${!h ? `<div class="row" style="margin-top:8px"><button class="red" data-act="remove" data-p="${id}">Cash out &amp; leave (${fmt(p.stack)})</button></div>` : ''}
+    <div class="row" style="margin-top:8px"><button data-act="close">Close</button></div>`);
+}
+
+function addPlayerModal() {
+  modal(`<h2 style="margin:0 0 6px">Add player</h2>
+    <label>Name</label><input id="npName" value="Player ${S.players.length + 1}">
+    <label>Starting chips</label>
+    <div class="chips">${[100, 500, 1000, 2000].map(v => `<button class="chip" data-act="npq" data-v="${v}">${fmt(v)}</button>`).join('')}</div>
+    <input id="npAmt" type="number" inputmode="numeric" value="${S.defaultStart || 1000}">
+    <div class="muted" style="margin-top:6px">${S.hand ? 'Joins from the next hand.' : 'Joins the next hand, seated after the last player.'}</div>
+    <div class="row" style="margin-top:12px"><button data-act="close">Cancel</button><button class="gold" data-act="addPlayerOk">Add</button></div>`);
+}
+
+function settlements(list) {
+  const cr = list.filter(x => x.net > 0).map(x => ({ ...x })).sort((a, b) => b.net - a.net);
+  const db = list.filter(x => x.net < 0).map(x => ({ ...x, net: -x.net })).sort((a, b) => b.net - a.net);
+  const out = []; let i = 0, j = 0;
+  while (i < db.length && j < cr.length) {
+    const a = Math.min(db[i].net, cr[j].net);
+    if (a > 0) out.push(`${esc(db[i].name)} pays ${esc(cr[j].name)} <b>${fmt(a)}</b>`);
+    db[i].net -= a; cr[j].net -= a;
+    if (!db[i].net) i++; if (!cr[j].net) j++;
+  }
+  return out;
+}
+
+function summaryModal() {
+  const rows = S.players.map(p => ({ name: p.name + (p.removed ? ' (left)' : ''), buyin: p.buyin, stack: p.stack + (p.pending || 0), net: netOf(p) }));
+  const st = settlements(rows);
+  modal(`<h2 style="margin:0 0 8px">Summary · ${S.handNo} hands played</h2>
+    <table><tr><th>Player</th><th>Bought in</th><th>Now</th><th>Net</th></tr>
+    ${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${fmt(r.buyin)}</td><td>${fmt(r.stack)}</td><td class="${r.net > 0 ? 'pos' : r.net < 0 ? 'neg' : ''}">${sgn(r.net)}</td></tr>`).join('')}
+    <tr><td><b>Total</b></td><td>${fmt(sum(rows.map(r => r.buyin)))}</td><td>${fmt(sum(rows.map(r => r.stack)))}</td><td></td></tr></table>
+    ${S.hand ? `<div class="muted" style="margin-top:6px">A hand is in progress — ${fmt(potTotal())} is in the pot, so totals don't balance yet.</div>` : ''}
+    <h3>Settle up</h3>
+    ${st.length ? st.map(s => `<div>${s}</div>`).join('') : '<div class="muted">Nobody owes anything.</div>'}
+    <h3>Hand history</h3>
+    ${S.history.length ? S.history.slice(0, 60).map(e => `<div style="padding:4px 0;border-bottom:1px solid var(--line)">#${e.n} · pot ${fmt(e.pot)} — ${e.winners.map(w => `${esc(w.name)} ${fmt(w.amt)}`).join(', ')}</div>`).join('') : '<div class="muted">No hands yet.</div>'}
+    <div class="row" style="margin-top:14px"><button class="red" data-act="newGame">${confirmKey === 'new' ? 'Tap again to erase & start new' : 'New game'}</button><button data-act="close">Close</button></div>`);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) { if (e.target.id === 'modal') closeModal(); return; }
+  const a = el.dataset.act, pid = el.dataset.p != null ? +el.dataset.p : null, v = el.dataset.v;
+  switch (a) {
+    // setup
+    case 'preset': syncSetup(); setup.start = +v; setup.rows.forEach(r => r.amt = +v); return renderSetup();
+    case 'applyStart': syncSetup(); setup.rows.forEach(r => r.amt = setup.start); return renderSetup();
+    case 'addRow': syncSetup(); setup.rows.push({ name: 'Player ' + (setup.rows.length + 1), amt: setup.start }); renderSetup(); { const r = document.querySelectorAll('.rn'); r[r.length - 1].select(); } return;
+    case 'delRow': syncSetup(); setup.rows.splice(+el.dataset.i, 1); return renderSetup();
+    case 'startGame': {
+      syncSetup();
+      const rows = setup.rows.filter(r => r.name.trim());
+      if (rows.length < 2) return toast('Add at least 2 players');
+      if (rows.some(r => !num(r.amt))) return toast('Every player needs a starting amount');
+      const sb = Math.floor(+setup.sb) || 0, bb = Math.floor(+setup.bb) || 0;
+      S = { players: rows.map((r, i) => ({ id: i + 1, name: r.name.trim(), stack: num(r.amt), buyin: num(r.amt), pending: 0, out: false, removed: false })), nextId: rows.length + 1, sb, bb: Math.max(bb, sb), dealer: 1, handNo: 0, hand: null, history: [], defaultStart: setup.start };
+      undoStack = [];
+      return render();
+    }
+    // game
+    case 'undo': if (undoStack.length) { S = JSON.parse(undoStack.pop()); closeModal(); render(); toast('Undone'); } return;
+    case 'deal': startHand(); return render();
+    case 'fold': case 'check': case 'call': case 'allin': act(a); return render();
+    case 'raise': { const i = $('#raiseAmt'); const val = num(i && i.value); if (!val) return toast('Enter an amount'); act('raise', val); return render(); }
+    case 'q': { const i = $('#raiseAmt'); if (i) { i.value = v; updateRaiseHint(); } return; }
+    case 'skip': skipToShowdown(); return render();
+    case 'win': { const w = H().winners[+el.dataset.pot]; const k = w.indexOf(pid); k >= 0 ? w.splice(k, 1) : w.push(pid); return render(); }
+    case 'award': awardPots(); return render();
+    case 'openP': return playerModal(pid);
+    case 'bq': $('#buyAmt').value = v; return;
+    case 'buyin': {
+      const amt = num($('#buyAmt').value); if (!amt) return toast('Enter an amount');
+      pushUndo();
+      const p = P(pid), h = S.hand;
+      p.buyin += amt;
+      if (h && h.seats.includes(pid)) { p.pending = (p.pending || 0) + amt; toast(`${p.name}: +${fmt(amt)} after this hand`); }
+      else { p.stack += amt; toast(`${p.name} bought in ${fmt(amt)}`); }
+      closeModal(); return render();
+    }
+    case 'rename': { const n = $('#renameIn').value.trim(); if (!n) return; pushUndo(); P(pid).name = n; closeModal(); return render(); }
+    case 'makeDealer': pushUndo(); S.dealer = pid; closeModal(); return render();
+    case 'sit': pushUndo(); P(pid).out = !P(pid).out; closeModal(); return render();
+    case 'remove': {
+      if (confirmKey !== 'rm' + pid) { confirmKey = 'rm' + pid; el.textContent = 'Tap again to confirm'; return; }
+      pushUndo(); const p = P(pid); p.removed = true; p.out = true;
+      if (S.dealer === pid) S.dealer = nextFrom(pid, S.players.filter(x => !x.removed).map(x => x.id));
+      closeModal(); toast(`${p.name} left with ${fmt(p.stack)}`); return render();
+    }
+    case 'addPlayer': return addPlayerModal();
+    case 'npq': $('#npAmt').value = v; return;
+    case 'addPlayerOk': {
+      const n = $('#npName').value.trim(), amt = num($('#npAmt').value);
+      if (!n || !amt) return toast('Enter a name and amount');
+      pushUndo();
+      S.players.push({ id: S.nextId++, name: n, stack: amt, buyin: amt, pending: 0, out: false, removed: false });
+      closeModal(); return render();
+    }
+    case 'summary': confirmKey = null; return summaryModal();
+    case 'newGame':
+      if (confirmKey !== 'new') { confirmKey = 'new'; return summaryModal(); }
+      S = null; undoStack = []; closeModal(); try { localStorage.removeItem(KEY); } catch (e) {} return render();
+    case 'close': return closeModal();
+  }
+});
+document.addEventListener('input', e => { if (e.target.id === 'raiseAmt') updateRaiseHint(); });
+document.addEventListener('change', e => {
+  if (!S) return;
+  if (e.target.id === 'sbIn' || e.target.id === 'bbIn') {
+    const sb = Math.max(0, Math.floor(+$('#sbIn').value) || 0), bb = Math.max(0, Math.floor(+$('#bbIn').value) || 0);
+    pushUndo(); S.sb = sb; S.bb = Math.max(sb, bb); render(); toast(`Blinds ${fmt(S.sb)}/${fmt(S.bb)}`);
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'raiseAmt') { e.preventDefault(); document.querySelector('[data-act="raise"]').click(); } });
+
+render();
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
